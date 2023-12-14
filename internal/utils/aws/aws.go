@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancing"
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
+	"github.com/aws/aws-sdk-go-v2/service/organizations"
 	"github.com/aws/aws-sdk-go-v2/service/servicequotas"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/go-logr/logr"
@@ -25,6 +26,7 @@ type AwsApi struct {
 	ELB   *elasticloadbalancing.Client
 	ELBV2 *elasticloadbalancingv2.Client
 	SQ    *servicequotas.Client
+	ORG   *organizations.Client
 }
 
 // NewAwsApi creates an AwsApi object that aggregates AWS service clients
@@ -43,6 +45,7 @@ func NewAwsApi(log logr.Logger, auth v1alpha1.AwsAuth, region string) (*AwsApi, 
 		ELB:   elasticloadbalancing.NewFromConfig(cfg),
 		ELBV2: elasticloadbalancingv2.NewFromConfig(cfg),
 		SQ:    servicequotas.NewFromConfig(cfg),
+		ORG:   organizations.NewFromConfig(cfg),
 	}, nil
 }
 
