@@ -2,6 +2,9 @@ package iam
 
 import (
 	"context"
+	"github.com/aws/aws-sdk-go-v2/service/organizations"
+	orgtypes "github.com/aws/aws-sdk-go-v2/service/organizations/types"
+	"github.com/aws/smithy-go/middleware"
 	"net/url"
 	"testing"
 
@@ -18,11 +21,12 @@ import (
 )
 
 type iamApiMock struct {
-	attachedGroupPolicies map[string]*iam.ListAttachedGroupPoliciesOutput
-	attachedRolePolicies  map[string]*iam.ListAttachedRolePoliciesOutput
-	attachedUserPolicies  map[string]*iam.ListAttachedUserPoliciesOutput
-	policyArns            map[string]*iam.GetPolicyOutput
-	policyVersions        map[string]*iam.GetPolicyVersionOutput
+	attachedGroupPolicies          map[string]*iam.ListAttachedGroupPoliciesOutput
+	attachedRolePolicies           map[string]*iam.ListAttachedRolePoliciesOutput
+	attachedUserPolicies           map[string]*iam.ListAttachedUserPoliciesOutput
+	policyArns                     map[string]*iam.GetPolicyOutput
+	policyVersions                 map[string]*iam.GetPolicyVersionOutput
+	attachedServiceControlPolicies map[string]*organizations.ListPoliciesForTargetOutput
 }
 
 func (m iamApiMock) GetPolicy(ctx context.Context, params *iam.GetPolicyInput, optFns ...func(*iam.Options)) (*iam.GetPolicyOutput, error) {
@@ -43,6 +47,10 @@ func (m iamApiMock) ListAttachedRolePolicies(ctx context.Context, params *iam.Li
 
 func (m iamApiMock) ListAttachedUserPolicies(ctx context.Context, params *iam.ListAttachedUserPoliciesInput, optFns ...func(*iam.Options)) (*iam.ListAttachedUserPoliciesOutput, error) {
 	return m.attachedUserPolicies[*params.UserName], nil
+}
+
+func (m iamApiMock) ListPolicies(ctx context.Context, params *organizations.ListPoliciesForTargetInput, optFns ...func(*organizations.Options)) (*organizations.ListPoliciesForTargetOutput, error) {
+	return m.attachedServiceControlPolicies["policy1"], nil
 }
 
 const (
@@ -133,6 +141,16 @@ var iamService = NewIAMRuleService(logr.Logger{}, iamApiMock{
 			},
 		},
 	},
+	attachedUserPolicies: map[string]*iam.ListAttachedUserPoliciesOutput{
+		"iamUser": {
+			AttachedPolicies: []iamtypes.AttachedPolicy{
+				{
+					PolicyArn:  ptr.Ptr("iamRoleArn1"),
+					PolicyName: ptr.Ptr("iamPolicy"),
+				},
+			},
+		},
+	},
 	policyArns: map[string]*iam.GetPolicyOutput{
 		"iamRoleArn1": {
 			Policy: ptr.Ptr(iamtypes.Policy{
@@ -150,16 +168,6 @@ var iamService = NewIAMRuleService(logr.Logger{}, iamApiMock{
 			}),
 		},
 	},
-	attachedUserPolicies: map[string]*iam.ListAttachedUserPoliciesOutput{
-		"iamUser": {
-			AttachedPolicies: []iamtypes.AttachedPolicy{
-				{
-					PolicyArn:  ptr.Ptr("iamRoleArn1"),
-					PolicyName: ptr.Ptr("iamPolicy"),
-				},
-			},
-		},
-	},
 	policyVersions: map[string]*iam.GetPolicyVersionOutput{
 		"iamRoleArn1": {
 			PolicyVersion: ptr.Ptr(iamtypes.PolicyVersion{
@@ -175,6 +183,21 @@ var iamService = NewIAMRuleService(logr.Logger{}, iamApiMock{
 			PolicyVersion: ptr.Ptr(iamtypes.PolicyVersion{
 				Document: ptr.Ptr(url.QueryEscape(policyDocumentOutput3)),
 			}),
+		},
+	},
+	attachedServiceControlPolicies: map[string]*organizations.ListPoliciesForTargetOutput{
+		"policy1": {
+			Policies: []orgtypes.PolicySummary{
+				{
+					Arn:         ptr.Ptr(""),
+					AwsManaged:  false,
+					Description: nil,
+					Id:          ptr.Ptr(""),
+					Name:        ptr.Ptr(""),
+					Type:        "",
+				},
+			},
+			ResultMetadata: middleware.Metadata{},
 		},
 	},
 })
